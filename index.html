@@ -6,50 +6,31 @@
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
         #player-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         #player { max-width: calc(100vh * 9 / 16); width: 100%; height: 100%; }
-        
         #unmuteButton {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 60vw; max-width: 300px; padding: 5vw 3vw; font-size: 4.5vw; 
+            width: 60vw; max-width: 300px; padding: 5vw 3vw; font-size: 4.5vw;
             max-font-size: 28px; font-weight: bold; color: white; background-color: rgba(0, 0, 0, 0.75);
             border: 3px solid white; border-radius: 20px; cursor: pointer; z-index: 10;
             white-space: normal; word-break: keep-all; text-align: center; display: flex;
             justify-content: center; align-items: center; box-sizing: border-box; line-height: 1.3;
         }
-
-        /* --- ✨ [수정] 이전/다음 버튼 스타일 --- */
         #controls-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            opacity: 0; /* 평소에는 숨김 */
-            transition: opacity 0.3s ease-in-out;
-            z-index: 20;
-            pointer-events: none; /* ✨ 중요: 오버레이 자체는 클릭 이벤트를 무시(통과)하도록 설정 */
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0; transition: opacity 0.3s ease-in-out; z-index: 20;
+            pointer-events: none;
         }
-        #player-container:hover #controls-overlay {
-            opacity: 1; /* 마우스를 올리면 나타남 */
-        }
+        #player-container:hover #controls-overlay { opacity: 1; }
         .control-button {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background-color: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.7);
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            pointer-events: auto; /* ✨ 중요: 버튼 자체는 다시 클릭 이벤트를 받도록 설정 */
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 50%; width: 50px; height: 50px; cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            pointer-events: auto;
         }
-        .control-button:hover {
-            background-color: rgba(0, 0, 0, 0.8);
-        }
+        .control-button:hover { background-color: rgba(0, 0, 0, 0.8); }
         #prevButton { left: 20px; }
         #nextButton { right: 20px; }
         .control-button svg { fill: white; width: 25px; height: 25px; }
-
         @media (max-width: 400px) {
             #unmuteButton { font-size: 20px; }
             .control-button { width: 40px; height: 40px; }
@@ -57,7 +38,6 @@
             #nextButton { right: 10px; }
         }
     </style>
-
     <meta property="og:title" content="나만의 쇼츠 플레이어"/>
     <meta property="og:description" content="최신 쇼츠 영상을 자동으로 연속 재생합니다."/>
     <meta property="og:image" content="https://i.postimg.cc/28gyG8Pr/202302011703553516-l.png"/>
@@ -68,7 +48,6 @@
     <div id="player-container">
         <div id="player"></div>
         <button id="unmuteButton">터치하여 소리 켜기</button>
-
         <div id="controls-overlay">
             <button id="prevButton" class="control-button" title="이전 영상">
                 <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
@@ -78,9 +57,8 @@
             </button>
         </div>
     </div>
-
     <script>
-        const videoIds = JSON.parse(["F0xXjcItYE8","Z3x0D_6Fw-M","6P3gwR3nTH8","aufRFINxr9Q","Uk5bafHSTCI","yooN5VekjLg","cn6uFVTbHLg","LB98JxsYH3o","SDkaaQ3x4k0","Z2FxI_7-nKA","pB8CBYvml8w","-TdeRPg3tds","9aruFL2Cu0Q","pI6wS7GBLM4","7EcKCwjx_8E","ud3W9uKVdIg","HWsZdQzfa3w","SjXl3NF8uJQ","atnUusBIBf0","fba2zKXe4rI","gpkHpOss7rk","tzx7cvSWb6s","b9ocAS2HNEQ","-aFUAqmqXP4","XVYPfzkCd5o","ihx6eeIbLwU","MkRqYRBQt8M","LE5kisYWwqw","TsKPzMs_zyI","pK3gAs_ACzI","Oxojt1yUK6E","IlfrLEvR1KA","9N3NPOovv98","EXHmYWjUBVA","hzI8H2t_Dr4","hUcJoN2I7fg","b_QnpMFawQE","J8IuME6pX1c","LdQMtr71erQ","8Znkpynr574","dcU878So38Y","ib45T2xftXQ","32yt3kt4KLc","b7AiEsCFCEw","fhjQX9Orp2A","IUDi1L2k-x0","cklkyCx7ErA","UtLta4YQZK8","p0_dW4IeopE","lJKx0wO7qEI","zIapD2mApco","Mnai-uTO2Wc","Jbs2vhvkh4c","8Ok4JcrsBOg","dJsc9KTXkGc","rg4BJNfIJsY","ufOHLlyCJCw"].replace(/&quot;/g,'"'));
+        const videoIds = ["F0xXjcItYE8","Z3x0D_6Fw-M","6P3gwR3nTH8","aufRFINxr9Q","Uk5bafHSTCI","yooN5VekjLg","cn6uFVTbHLg","LB98JxsYH3o","SDkaaQ3x4k0","Z2FxI_7-nKA","pB8CBYvml8w","-TdeRPg3tds","9aruFL2Cu0Q","pI6wS7GBLM4","7EcKCwjx_8E","ud3W9uKVdIg","HWsZdQzfa3w","SjXl3NF8uJQ","atnUusBIBf0","fba2zKXe4rI","gpkHpOss7rk","tzx7cvSWb6s","b9ocAS2HNEQ","-aFUAqmqXP4","XVYPfzkCd5o","ihx6eeIbLwU","MkRqYRBQt8M","LE5kisYWwqw","TsKPzMs_zyI","pK3gAs_ACzI","Oxojt1yUK6E","IlfrLEvR1KA","9N3NPOovv98","EXHmYWjUBVA","hzI8H2t_Dr4","hUcJoN2I7fg","b_QnpMFawQE","J8IuME6pX1c","LdQMtr71erQ","8Znkpynr574","dcU878So38Y","ib45T2xftXQ","32yt3kt4KLc","b7AiEsCFCEw","fhjQX9Orp2A","IUDi1L2k-x0","cklkyCx7ErA","UtLta4YQZK8","p0_dW4IeopE","lJKx0wO7qEI","zIapD2mApco","Mnai-uTO2Wc","Jbs2vhvkh4c","8Ok4JcrsBOg","dJsc9KTXkGc","rg4BJNfIJsY","ufOHLlyCJCw"];
         let player;
 
         function onYouTubeIframeAPIReady() {
@@ -96,9 +74,7 @@
         }
 
         function onPlayerReady(event) {
-            // 재생 목록을 큐에 추가합니다. 이렇게 하면 previousVideo/nextVideo가 원활하게 작동합니다.
             event.target.cuePlaylist(videoIds);
-            
             const unmuteBtn = document.getElementById('unmuteButton');
             if (player.isMuted()) {
                 unmuteBtn.style.display = 'flex';
@@ -107,11 +83,9 @@
                 player.unMute();
                 unmuteBtn.style.display = 'none';
             });
-            
             document.getElementById('prevButton').addEventListener('click', () => {
                 player.previousVideo();
             });
-
             document.getElementById('nextButton').addEventListener('click', () => {
                 player.nextVideo();
             });
@@ -126,8 +100,6 @@
                     unmuteBtn.style.display = 'none';
                 }
             }
-            // onStateChange의 자동 다음 재생 로직은 cuePlaylist를 사용하면 불필요하므로 제거해도 됩니다.
-            // YouTube 플레이어가 알아서 목록의 다음 영상을 재생합니다. 루프는 플레이어 변수에서 설정 가능합니다.
         }
     </script>
     <script async src="https://www.youtube.com/iframe_api"></script>
