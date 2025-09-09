@@ -1,1 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
+        #player-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        #player { max-width: calc(100vh * 9 / 16); width: 100%; height: 100%; }
+        
+        /* --- 최종 버튼 스타일 --- */
+        #unmuteButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            
+            /* 버튼 가로 크기: 화면 너비의 60% (모바일 기준), 최대 300px */
+            width: 60vw; 
+            max-width: 300px;
+            
+            /* 버튼 세로 패딩: 가로 크기에 비례하여 높이 조절 */
+            padding: 5vw 3vw;
+            
+            /* 폰트 크기: 화면 너비에 비례, 최대 크기 지정 */
+            font-size: 4.5vw; 
+            max-font-size: 28px;
+            
+            font-weight: bold;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.75);
+            border: 3px solid white;
+            border-radius: 20px;
+            cursor: pointer;
+            z-index: 10;
+            display: none;
+            
+            white-space: normal;
+            word-break: keep-all;
+            text-align: center;
 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box; 
+            line-height: 1.3;
+        }
+
+        /* 폰트 크기가 너무 작아지지 않도록 최소값 설정 */
+        @media (max-width: 400px) {
+            #unmuteButton {
+                font-size: 20px;
+            }
+        }
+    </style>
+
+    <meta property="og:title" content="나만의 쇼츠 플레이어"/>
+    <meta property="og:description" content="최신 쇼츠 영상을 자동으로 연속 재생합니다."/>
+    <meta property="og:image" content="https://i.postimg.cc/28gyG8Pr/202302011703553516-l.png"/>
+    <meta property="og:url" content="https://born520.github.io/shortslist/"/>
+    <meta property="og:type" content="website" />
+</head>
+<body>
+    <div id="player-container">
+        <div id="player"></div>
+        <button id="unmuteButton">터치하여 소리 켜기</button>
+    </div>
+    <script>
+        const videoIds = ["F0xXjcItYE8","Z3x0D_6Fw-M","6P3gwR3nTH8","aufRFINxr9Q","Uk5bafHSTCI","yooN5VekjLg","cn6uFVTbHLg","LB98JxsYH3o","SDkaaQ3x4k0","Z2FxI_7-nKA","pB8CBYvml8w","-TdeRPg3tds","9aruFL2Cu0Q","pI6wS7GBLM4","7EcKCwjx_8E","ud3W9uKVdIg","HWsZdQzfa3w","SjXl3NF8uJQ","atnUusBIBf0","fba2zKXe4rI","gpkHpOss7rk","tzx7cvSWb6s","b9ocAS2HNEQ","-aFUAqmqXP4","XVYPfzkCd5o","ihx6eeIbLwU","MkRqYRBQt8M","LE5kisYWwqw","TsKPzMs_zyI","pK3gAs_ACzI","Oxojt1yUK6E","IlfrLEvR1KA","9N3NPOovv98","EXHmYWjUBVA","hzI8H2t_Dr4","hUcJoN2I7fg","b_QnpMFawQE","J8IuME6pX1c","LdQMtr71erQ","8Znkpynr574","dcU878So38Y","ib45T2xftXQ","32yt3kt4KLc","b7AiEsCFCEw","fhjQX9Orp2A","IUDi1L2k-x0","cklkyCx7ErA","UtLta4YQZK8","p0_dW4IeopE","lJKx0wO7qEI","zIapD2mApco","Mnai-uTO2Wc","Jbs2vhvkh4c","8Ok4JcrsBOg","dJsc9KTXkGc","rg4BJNfIJsY","ufOHLlyCJCw"];
+        let player;
+        let currentVideoIndex = 0;
+
+        function onYouTubeIframeAPIReady() {
+            if (videoIds && videoIds.length > 0 && videoIds !== '{{VIDEO_ID_ARRAY_PLACEHOLDER}}') {
+                player = new YT.Player('player', {
+                    height: '100%', width: '100%', videoId: videoIds[currentVideoIndex],
+                    playerVars: { 'autoplay': 1, 'mute': 1, 'controls': 1, 'loop': 0, 'rel': 0, 'playsinline': 1 },
+                    events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange }
+                });
+            } else {
+                document.getElementById('player-container').innerHTML = "<h1>재생할 영상이 없습니다.</h1>";
+            }
+        }
+
+        function onPlayerReady(event) {
+            event.target.playVideo();
+            const unmuteBtn = document.getElementById('unmuteButton');
+            if (player.isMuted()) {
+                unmuteBtn.style.display = 'flex';
+            }
+            unmuteBtn.addEventListener('click', () => {
+                player.unMute();
+                unmuteBtn.style.display = 'none';
+            });
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.PLAYING) {
+                const unmuteBtn = document.getElementById('unmuteButton');
+                if (player.isMuted()) {
+                    unmuteBtn.style.display = 'flex';
+                } else {
+                    unmuteBtn.style.display = 'none';
+                }
+            }
+            if (event.data == YT.PlayerState.ENDED) {
+                currentVideoIndex++;
+                if (currentVideoIndex >= videoIds.length) { currentVideoIndex = 0; }
+                player.loadVideoById(videoIds[currentVideoIndex]);
+            }
+        }
+    </script>
+    <script async src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>
