@@ -12,18 +12,58 @@
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; }
         body { background-color: #000; overflow: hidden; }
-        #mobile-view { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        #mobile-view { display: block; position: relative; width: 100%; height: 100%; }
         #mobile-player-container { width: 100%; height: 100%; max-width: calc(100vh * 9 / 16); margin: auto; }
         #touchOverlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 5; }
         #unmuteButton { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 15px 25px; font-size: 18px; font-weight: bold; color: white; background: rgba(0, 0, 0, 0.7); border: 2px solid rgba(255, 255, 255, 0.8); border-radius: 30px; cursor: pointer; z-index: 10; backdrop-filter: blur(10px); display: none; }
         #desktop-view { display: none; }
-        @media (min-width: 768px) {
-            body { background-color: #f1f1f1; overflow-y: auto; }
+
+        @media (min-width: 850px) {
+            body { background-color: #181818; }
             #mobile-view { display: none; }
-            #desktop-view { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding: 20px; max-width: 1800px; margin: auto; }
-            .desktop-player-wrapper { position: relative; width: 100%; padding-top: 177.77%; background-color: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: box-shadow 0.3s ease-in-out; cursor: pointer; }
-            .desktop-player-wrapper.is-playing { box-shadow: 0 0 0 4px #007bff; cursor: default; }
-            #desktop-player-instance { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+            #desktop-view {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100%;
+                gap: 20px;
+                padding: 20px;
+                box-sizing: border-box;
+            }
+            #main-player-wrapper {
+                width: 350px;
+                height: calc(350px * 16 / 9);
+                background-color: #000;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                overflow: hidden;
+            }
+            #desktop-player-instance { width: 100%; height: 100%; }
+            .side-video {
+                width: 120px;
+                height: calc(120px * 16 / 9);
+                border-radius: 8px;
+                overflow: hidden;
+                cursor: pointer;
+                position: relative;
+                opacity: 0.5;
+                transition: transform 0.2s ease, opacity 0.2s ease;
+            }
+            .side-video:hover {
+                transform: scale(1.05);
+                opacity: 1;
+            }
+            .side-video img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            .side-video .overlay {
+                position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                background-color: rgba(0,0,0,0.4);
+                display: flex; justify-content: center; align-items: center;
+                font-size: 30px; color: white;
+            }
         }
     </style>
 </head>
@@ -33,123 +73,105 @@
         <div id="touchOverlay"></div>
         <button id="unmuteButton">🔊 소리 켜기</button>
     </div>
-    <div id="desktop-view"></div>
+    
+    <div id="desktop-view">
+        <div id="prev-video" class="side-video">
+            <img id="prev-thumb" src="">
+            <div class="overlay"><span>&#9664;</span></div>
+        </div>
+        <div id="main-player-wrapper"></div>
+        <div id="next-video" class="side-video">
+            <img id="next-thumb" src="">
+            <div class="overlay"><span>&#9654;</span></div>
+        </div>
+    </div>
+
 <script>
     const videoIds = ["pUVnsvERgos","jc6DZLMr-YY","0axwCpT0o7M","OEassmynRro","xKVQ0i3jQoo","NJYtmcWV5ks","bWx1SjACMFU"];
     const SETTINGS = { enableControls: true, enableSwipe: true, enableLoop: true };
-    let mobilePlayer;
-    let desktopPlayer;
-    let currentMobileIndex = 0;
-    let currentDesktopIndex = -1;
+    let mobilePlayer, desktopPlayer;
+    let currentMobileIndex = 0, currentDesktopIndex = 0;
     
     function onYouTubeIframeAPIReady() {
         if (!videoIds || videoIds.length === 0) {
-            document.body.innerHTML = "<h1 style='color: #333; text-align: center; padding-top: 50px;'>재생할 영상이 없습니다.</h1>";
+            document.body.innerHTML = "<h1 style='color: #888; text-align: center; padding-top: 50px;'>재생할 영상이 없습니다.</h1>";
             return;
         }
-        if (window.matchMedia('(min-width: 768px)').matches) {
+        if (window.matchMedia('(min-width: 850px)').matches) {
             setupDesktopView();
         } else {
             setupMobileView();
         }
     }
 
-    // --- 모바일 뷰 로직 (단일 플레이어) ---
-    function setupMobileView(){
-        const container = document.getElementById('mobile-player-container');
-        const playerDiv = document.createElement('div');
-        container.appendChild(playerDiv);
-        mobilePlayer = new YT.Player(playerDiv, {
-            height: '100%', width: '100%', videoId: videoIds[0],
-            playerVars: {'autoplay': 1, 'mute': 1, 'rel': 0, 'playsinline': 1, 'controls': 0},
-            events: {'onReady': onMobilePlayerReady, 'onStateChange': onMobilePlayerStateChange}
-        });
-    }
-    function onMobilePlayerReady(event){const unmuteBtn=document.getElementById('unmuteButton');unmuteBtn.style.display='block';unmuteBtn.addEventListener('click',()=>{mobilePlayer.unMute();unmuteBtn.style.display='none'});if(SETTINGS.enableSwipe)setupSwipeListeners()}
+    // --- 모바일 뷰 로직 (변경 없음) ---
+    function setupMobileView(){const c=document.getElementById('mobile-player-container');const p=document.createElement('div');c.appendChild(p);mobilePlayer=new YT.Player(p,{height:'100%',width:'100%',videoId:videoIds[0],playerVars:{'autoplay':1,'mute':1,'rel':0,'playsinline':1,'controls':0},events:{'onReady':onMobilePlayerReady,'onStateChange':onMobilePlayerStateChange}})}
+    function onMobilePlayerReady(event){const b=document.getElementById('unmuteButton');b.style.display='block';b.addEventListener('click',()=>{mobilePlayer.unMute();b.style.display='none'});if(SETTINGS.enableSwipe)setupSwipeListeners()}
     function onMobilePlayerStateChange(event){if(event.data===YT.PlayerState.PLAYING&&!mobilePlayer.isMuted()){document.getElementById('unmuteButton').style.display='none'}else if(event.data===YT.PlayerState.ENDED){playNextMobile()}}
     function playNextMobile(){currentMobileIndex++;if(currentMobileIndex>=videoIds.length){if(SETTINGS.enableLoop)currentMobileIndex=0;else return}mobilePlayer.loadVideoById(videoIds[currentMobileIndex])}
     function playPrevMobile(){currentMobileIndex--;if(currentMobileIndex<0){if(SETTINGS.enableLoop)currentMobileIndex=videoIds.length-1;else{currentMobileIndex=0;return}}mobilePlayer.loadVideoById(videoIds[currentMobileIndex])}
-    function setupSwipeListeners(){const container=document.getElementById('touchOverlay');let startY=0;container.addEventListener('touchstart',e=>{startY=e.touches[0].clientY},{passive:true});container.addEventListener('touchend',e=>{const deltaY=startY-e.changedTouches[0].clientY;if(Math.abs(deltaY)>50){if(deltaY>0)playNextMobile();else playPrevMobile()}},{passive:true})}
+    function setupSwipeListeners(){const c=document.getElementById('touchOverlay');let s=0;c.addEventListener('touchstart',e=>{s=e.touches[0].clientY},{passive:true});c.addEventListener('touchend',e=>{const d=s-e.changedTouches[0].clientY;if(Math.abs(d)>50){if(d>0)playNextMobile();else playPrevMobile()}},{passive:true})}
 
-    // --- [수정됨] 데스크톱 뷰 로직 (단일 플레이어 이동 방식) ---
+    // --- [수정됨] 데스크톱 뷰 로직 (중앙 플레이어 방식) ---
     function setupDesktopView() {
-        const desktopContainer = document.getElementById('desktop-view');
-        // 1. 모든 영상의 '틀' (wrapper)을 만듭니다.
-        videoIds.forEach((id, index) => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'desktop-player-wrapper';
-            wrapper.id = 'wrapper-' + index;
-            wrapper.dataset.index = index;
-            wrapper.onclick = () => playDesktopVideo(index);
-            desktopContainer.appendChild(wrapper);
+        const mainContainer = document.getElementById('main-player-wrapper');
+        const playerDiv = document.createElement('div');
+        playerDiv.id = 'desktop-player-instance';
+        mainContainer.appendChild(playerDiv);
+
+        desktopPlayer = new YT.Player('desktop-player-instance', {
+            height: '100%', width: '100%',
+            videoId: videoIds[0],
+            playerVars: { 'autoplay': 1, 'mute': 1, 'rel': 0, 'playsinline': 1, 'controls': SETTINGS.enableControls ? 1 : 0 },
+            events: {
+                'onReady': onDesktopPlayerReady,
+                'onStateChange': onDesktopPlayerStateChange
+            }
         });
-
-        // 2. 실제 플레이어는 단 하나만 생성합니다.
-        const firstWrapper = document.getElementById('wrapper-0');
-        if (firstWrapper) {
-            const playerDiv = document.createElement('div');
-            playerDiv.id = 'desktop-player-instance';
-            firstWrapper.appendChild(playerDiv); // 첫번째 틀 안에 플레이어를 넣고 시작
-
-            desktopPlayer = new YT.Player('desktop-player-instance', {
-                height: '100%', width: '100%', videoId: videoIds[0],
-                playerVars: { 'autoplay': 1, 'mute': 1, 'rel': 0, 'playsinline': 1, 'controls': SETTINGS.enableControls ? 1 : 0 },
-                events: {
-                    'onReady': onDesktopPlayerReady,
-                    'onStateChange': onDesktopPlayerStateChange
-                }
-            });
-        }
     }
 
     function onDesktopPlayerReady() {
-        playDesktopVideo(0); // 준비가 되면 첫 영상 재생 시작
-    }
-
-    function playDesktopVideo(index) {
-        if (index >= videoIds.length) {
-            if (SETTINGS.enableLoop) index = 0;
-            else {
-                document.querySelector('.is-playing')?.classList.remove('is-playing');
-                currentDesktopIndex = -1;
-                return;
-            }
-        }
-        
-        // 이전에 재생중이던 틀에서 하이라이트 제거
-        const oldWrapper = document.querySelector('.is-playing');
-        if(oldWrapper) oldWrapper.classList.remove('is-playing');
-        
-        // 새로 재생할 틀에 하이라이트 추가
-        const targetWrapper = document.getElementById('wrapper-' + index);
-        targetWrapper?.classList.add('is-playing');
-
-        // 플레이어 이동 (이미 해당 위치에 있으면 이동 안 함)
-        const playerIframe = desktopPlayer.getIframe();
-        if (playerIframe.parentElement !== targetWrapper) {
-            targetWrapper.appendChild(playerIframe);
-        }
-
-        // 새 영상 로드 (이미 재생중인 영상이면 로드 안 함)
-        if (currentDesktopIndex !== index) {
-            desktopPlayer.loadVideoById(videoIds[index]);
-        }
-        
-        currentDesktopIndex = index;
-
-        // 화면 밖이면 스크롤
-        if(targetWrapper) {
-            const rect = targetWrapper.getBoundingClientRect();
-            if (rect.top < 0 || rect.bottom > window.innerHeight) {
-                 targetWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
+        updateDesktopView(0); // 뷰 초기화
     }
 
     function onDesktopPlayerStateChange(event) {
         if (event.data === YT.PlayerState.ENDED) {
-            playDesktopVideo(currentDesktopIndex + 1);
+            let nextIndex = currentDesktopIndex + 1;
+            if (nextIndex >= videoIds.length && !SETTINGS.enableLoop) {
+                return; // 반복 안하면 종료
+            }
+            updateDesktopView(nextIndex);
         }
+    }
+
+    function updateDesktopView(index) {
+        const numVideos = videoIds.length;
+        if (index >= numVideos) index = 0; // 목록 끝에 도달하면 처음으로
+        if (index < 0) index = numVideos - 1; // 목록 처음에 도달하면 끝으로
+
+        currentDesktopIndex = index;
+
+        // 1. 메인 플레이어 영상 교체
+        desktopPlayer.loadVideoById(videoIds[currentDesktopIndex]);
+
+        // 2. 썸네일 및 클릭 이벤트 업데이트
+        const prevIndex = (currentDesktopIndex - 1 + numVideos) % numVideos;
+        const nextIndex = (currentDesktopIndex + 1) % numVideos;
+
+        const prevThumb = document.getElementById('prev-thumb');
+        const nextThumb = document.getElementById('next-thumb');
+        const prevContainer = document.getElementById('prev-video');
+        const nextContainer = document.getElementById('next-video');
+
+        prevThumb.src = `https://i.ytimg.com/vi/${videoIds[prevIndex]}/hqdefault.jpg`;
+        nextThumb.src = `https://i.ytimg.com/vi/${videoIds[nextIndex]}/hqdefault.jpg`;
+        
+        prevContainer.onclick = () => updateDesktopView(prevIndex);
+        nextContainer.onclick = () => updateDesktopView(nextIndex);
+
+        // 3. 반복 안 할 때, 또는 영상이 하나일 때 양옆 숨기기
+        prevContainer.style.visibility = (numVideos > 1 && (SETTINGS.enableLoop || currentDesktopIndex > 0)) ? 'visible' : 'hidden';
+        nextContainer.style.visibility = (numVideos > 1 && (SETTINGS.enableLoop || currentDesktopIndex < numVideos - 1)) ? 'visible' : 'hidden';
     }
 </script>
 <script async src="https://www.youtube.com/iframe_api"></script>
