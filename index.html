@@ -51,51 +51,12 @@
     }
 
     // --- 모바일 뷰 로직 (변경 없음) ---
-    function setupMobileView() {
-        players['mobile'] = new YT.Player('mobile-player', {
-            height: '100%', width: '100%', videoId: videoIds[0],
-            playerVars: { 'autoplay': 1, 'mute': 1, 'rel': 0, 'playsinline': 1, 'controls': 0 },
-            events: { 'onReady': onMobilePlayerReady, 'onStateChange': onMobilePlayerStateChange }
-        });
-    }
-    function onMobilePlayerReady(event) {
-        const unmuteBtn = document.getElementById('unmuteButton');
-        unmuteBtn.style.display = 'block';
-        unmuteBtn.addEventListener('click', () => { players['mobile'].unMute(); unmuteBtn.style.display = 'none'; });
-        if (SETTINGS.enableSwipe) setupSwipeListeners();
-    }
-    function onMobilePlayerStateChange(event) {
-        if (event.data === YT.PlayerState.PLAYING && !players['mobile'].isMuted()) {
-            document.getElementById('unmuteButton').style.display = 'none';
-        } else if (event.data === YT.PlayerState.ENDED) {
-            playNextMobile();
-        }
-    }
-    function playNextMobile() {
-        currentMobileIndex++;
-        if (currentMobileIndex >= videoIds.length) {
-            if (SETTINGS.enableLoop) currentMobileIndex = 0;
-            else return; 
-        }
-        players['mobile'].loadVideoById(videoIds[currentMobileIndex]);
-    }
-    function playPrevMobile() {
-        currentMobileIndex--;
-        if (currentMobileIndex < 0) {
-            if (SETTINGS.enableLoop) currentMobileIndex = videoIds.length - 1;
-            else { currentMobileIndex = 0; return; }
-        }
-        players['mobile'].loadVideoById(videoIds[currentMobileIndex]);
-    }
-    function setupSwipeListeners() {
-        const container = document.getElementById('touchOverlay');
-        let startY = 0;
-        container.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
-        container.addEventListener('touchend', e => {
-            const deltaY = startY - e.changedTouches[0].clientY;
-            if (Math.abs(deltaY) > 50) { if (deltaY > 0) playNextMobile(); else playPrevMobile(); }
-        }, { passive: true });
-    }
+    function setupMobileView(){players['mobile']=new YT.Player('mobile-player',{height:'100%',width:'100%',videoId:videoIds[0],playerVars:{'autoplay':1,'mute':1,'rel':0,'playsinline':1,'controls':0},events:{'onReady':onMobilePlayerReady,'onStateChange':onMobilePlayerStateChange}})}
+    function onMobilePlayerReady(event){const unmuteBtn=document.getElementById('unmuteButton');unmuteBtn.style.display='block';unmuteBtn.addEventListener('click',()=>{players['mobile'].unMute();unmuteBtn.style.display='none'});if(SETTINGS.enableSwipe)setupSwipeListeners()}
+    function onMobilePlayerStateChange(event){if(event.data===YT.PlayerState.PLAYING&&!players['mobile'].isMuted()){document.getElementById('unmuteButton').style.display='none'}else if(event.data===YT.PlayerState.ENDED){playNextMobile()}}
+    function playNextMobile(){currentMobileIndex++;if(currentMobileIndex>=videoIds.length){if(SETTINGS.enableLoop)currentMobileIndex=0;else return}players['mobile'].loadVideoById(videoIds[currentMobileIndex])}
+    function playPrevMobile(){currentMobileIndex--;if(currentMobileIndex<0){if(SETTINGS.enableLoop)currentMobileIndex=videoIds.length-1;else{currentMobileIndex=0;return}}players['mobile'].loadVideoById(videoIds[currentMobileIndex])}
+    function setupSwipeListeners(){const container=document.getElementById('touchOverlay');let startY=0;container.addEventListener('touchstart',e=>{startY=e.touches[0].clientY},{passive:true});container.addEventListener('touchend',e=>{const deltaY=startY-e.changedTouches[0].clientY;if(Math.abs(deltaY)>50){if(deltaY>0)playNextMobile();else playPrevMobile()}},{passive:true})}
 
     // --- [수정됨] 데스크톱 뷰 로직 ---
     function setupDesktopView() {
@@ -126,12 +87,14 @@
                 return;
             }
         }
+        
         if (currentDesktopIndex === index && !isLoopingFromEnd) return;
 
-        if (currentDesktopIndex !== -1) {
-            players[currentDesktopIndex]?.pauseVideo();
+        if (currentDesktopIndex !== -1 && players[currentDesktopIndex]) {
+            players[currentDesktopIndex].pauseVideo();
             document.querySelector(`.desktop-player-wrapper[data-index="${currentDesktopIndex}"]`)?.classList.remove('is-playing');
         }
+
         currentDesktopIndex = index;
         const wrapper = document.querySelector(`.desktop-player-wrapper[data-index="${index}"]`);
         wrapper?.classList.add('is-playing');
@@ -145,9 +108,11 @@
 
         if (players[index]) {
             if (isLoopingFromEnd) {
-                players[index].seekTo(0); // [수정] 첫 영상으로 돌아갈 때, 0초로 되감기
+                // [수정] 영상을 새로 로드하여 플레이어 상태를 완전히 초기화
+                players[index].loadVideoById(videoIds[index]);
+            } else {
+                players[index].playVideo();
             }
-            players[index].playVideo();
         } else {
             createDesktopPlayer(index, initialPlay);
         }
@@ -157,7 +122,14 @@
         players[index] = new YT.Player('desktop-player-' + index, {
             height: '100%', width: '100%', videoId: videoIds[index],
             playerVars: { 'autoplay': 1, 'mute': isMuted ? 1 : 0, 'rel': 0, 'playsinline': 1, 'controls': SETTINGS.enableControls ? 1 : 0 },
-            events: { 'onStateChange': onDesktopPlayerStateChange }
+            events: { 
+                'onReady': (event) => {
+                    if (index === currentDesktopIndex) {
+                        event.target.playVideo();
+                    }
+                },
+                'onStateChange': onDesktopPlayerStateChange
+            }
         });
     }
 
@@ -165,7 +137,10 @@
         if (event.data === YT.PlayerState.ENDED) {
             const iframeId = event.target.getIframe().id;
             const currentIndex = parseInt(iframeId.split('-')[2]);
-            setTimeout(() => { playDesktopVideo(currentIndex + 1); }, 100); // 다음 영상으로 넘어갈 때 약간의 딜레이를 줌
+            // setTimeout 제거하여 직접 호출로 변경
+            if (currentIndex === currentDesktopIndex) {
+                playDesktopVideo(currentIndex + 1);
+            }
         }
     }
 </script>
