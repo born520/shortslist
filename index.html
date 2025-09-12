@@ -50,7 +50,7 @@
         else setupMobileView();
     }
 
-    // --- [수정됨] 모바일 뷰 로직 ---
+    // --- 모바일 뷰 로직 (변경 없음) ---
     function setupMobileView() {
         players['mobile'] = new YT.Player('mobile-player', {
             height: '100%', width: '100%', videoId: videoIds[0],
@@ -111,18 +111,22 @@
             wrapper.appendChild(playerDiv);
             desktopContainer.appendChild(wrapper);
         });
-        if (videoIds.length > 0) playDesktopVideo(0, true); // 첫 재생은 음소거로 시작
+        if (videoIds.length > 0) playDesktopVideo(0, true);
     }
+
     function playDesktopVideo(index, initialPlay = false) {
+        let isLoopingFromEnd = false;
         if (index >= videoIds.length) {
-            if (SETTINGS.enableLoop) index = 0;
-            else {
-                document.querySelector(`.desktop-player-wrapper[data-index="${currentDesktopIndex}"]`)?.classList.remove('is-playing');
+            if (SETTINGS.enableLoop) {
+                index = 0;
+                isLoopingFromEnd = true;
+            } else {
+                document.querySelector(`.desktop-player-wrapper.is-playing`)?.classList.remove('is-playing');
                 currentDesktopIndex = -1;
                 return;
             }
         }
-        if (currentDesktopIndex === index) return;
+        if (currentDesktopIndex === index && !isLoopingFromEnd) return;
 
         if (currentDesktopIndex !== -1) {
             players[currentDesktopIndex]?.pauseVideo();
@@ -131,15 +135,24 @@
         currentDesktopIndex = index;
         const wrapper = document.querySelector(`.desktop-player-wrapper[data-index="${index}"]`);
         wrapper?.classList.add('is-playing');
-        if(wrapper) {
+        
+        if(wrapper && !initialPlay) {
             const rect = wrapper.getBoundingClientRect();
             if (rect.top < 0 || rect.bottom > window.innerHeight) {
                  wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
-        if (players[index]) players[index].playVideo();
-        else createDesktopPlayer(index, initialPlay);
+
+        if (players[index]) {
+            if (isLoopingFromEnd) {
+                players[index].seekTo(0); // [수정] 첫 영상으로 돌아갈 때, 0초로 되감기
+            }
+            players[index].playVideo();
+        } else {
+            createDesktopPlayer(index, initialPlay);
+        }
     }
+
     function createDesktopPlayer(index, isMuted) {
         players[index] = new YT.Player('desktop-player-' + index, {
             height: '100%', width: '100%', videoId: videoIds[index],
@@ -147,11 +160,12 @@
             events: { 'onStateChange': onDesktopPlayerStateChange }
         });
     }
+
     function onDesktopPlayerStateChange(event) {
         if (event.data === YT.PlayerState.ENDED) {
             const iframeId = event.target.getIframe().id;
             const currentIndex = parseInt(iframeId.split('-')[2]);
-            playDesktopVideo(currentIndex + 1);
+            setTimeout(() => { playDesktopVideo(currentIndex + 1); }, 100); // 다음 영상으로 넘어갈 때 약간의 딜레이를 줌
         }
     }
 </script>
