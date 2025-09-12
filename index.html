@@ -10,7 +10,6 @@
     <meta property="og:image" content=""/>
     <meta property="og:url" content=""/>
     <style>
-        :root { --desktop-player-width: 340px; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; }
         
         /* 모바일 기본 스타일 */
@@ -26,33 +25,46 @@
         @media (min-width: 768px) {
             body { background-color: #f1f1f1; overflow-y: auto; }
             #mobile-view { display: none; }
-            #desktop-view { display: block; padding: 20px 0; }
+            #desktop-view {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr); /* 4열 그리드 */
+                gap: 20px;
+                padding: 20px;
+                max-width: 1800px;
+                margin: auto;
+            }
             .desktop-player-wrapper {
                 position: relative;
-                width: var(--desktop-player-width);
-                height: calc(var(--desktop-player-width) * 16 / 9);
-                margin: 0 auto 20px auto;
+                width: 100%;
+                padding-top: 177.77%; /* 9:16 Aspect Ratio */
                 background-color: #000;
                 border-radius: 12px;
                 overflow: hidden;
                 box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+                transition: box-shadow 0.3s ease-in-out;
             }
-            .desktop-player { width: 100%; height: 100%; }
+            .desktop-player-wrapper.is-playing {
+                box-shadow: 0 0 0 4px #007bff; /* 재생 중 하이라이트 */
+            }
+            .desktop-player {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+            }
         }
     </style>
 </head>
 <body>
 
     <div id="mobile-view">
-        <div id="mobile-player-container">
-            <div id="mobile-player"></div>
-        </div>
+        <div id="mobile-player-container"><div id="mobile-player"></div></div>
         <div id="touchOverlay"></div>
         <button id="unmuteButton">🔊 소리 켜기</button>
     </div>
 
-    <div id="desktop-view">
-        </div>
+    <div id="desktop-view"></div>
 
 <script>
     const videoIds = ["-YiDNUrMX6Y","xKVQ0i3jQoo","NJYtmcWV5ks","bWx1SjACMFU"];
@@ -61,8 +73,9 @@
         enableSwipe: true,
         enableLoop: true
     };
-    let players = {}; // 여러 플레이어를 관리하기 위한 객체
+    let players = {};
     let currentMobileIndex = 0;
+    let currentDesktopIndex = -1;
     
     function onYouTubeIframeAPIReady() {
         if (!videoIds || videoIds.length === 0) {
@@ -77,32 +90,31 @@
         }
     }
 
-    // --- 모바일 뷰 설정 ---
+    // --- 모바일 뷰 로직 (변경 없음) ---
+    function setupMobileView() { /* ... 기존과 동일 ... */ }
+    function onMobilePlayerReady(event) { /* ... 기존과 동일 ... */ }
+    function onMobilePlayerStateChange(event) { /* ... 기존과 동일 ... */ }
+    function playNextMobile() { /* ... 기존과 동일 ... */ }
+    function playPrevMobile() { /* ... 기존과 동일 ... */ }
+    function setupSwipeListeners() { /* ... 기존과 동일 ... */ }
+    // (이해를 돕기 위해 모바일 함수 본문은 생략. 실제 코드에는 포함되어 있습니다.)
     function setupMobileView() {
         const playerVars = { 'autoplay': 1, 'mute': 1, 'rel': 0, 'playsinline': 1, 'controls': 0 };
         if (SETTINGS.enableLoop) {
             playerVars.loop = 1;
-            playerVars.playlist = videoIds[0]; // 단일 영상 루프
+            playerVars.playlist = videoIds[0];
         }
-
         players['mobile'] = new YT.Player('mobile-player', {
-            height: '100%', width: '100%',
-            videoId: videoIds[0],
-            playerVars: playerVars,
+            height: '100%', width: '100%', videoId: videoIds[0], playerVars: playerVars,
             events: { 'onReady': onMobilePlayerReady, 'onStateChange': onMobilePlayerStateChange }
         });
     }
-
     function onMobilePlayerReady(event) {
         const unmuteBtn = document.getElementById('unmuteButton');
         unmuteBtn.style.display = 'block';
-        unmuteBtn.addEventListener('click', () => {
-            players['mobile'].unMute();
-            unmuteBtn.style.display = 'none';
-        });
+        unmuteBtn.addEventListener('click', () => { players['mobile'].unMute(); unmuteBtn.style.display = 'none'; });
         if (SETTINGS.enableSwipe) setupSwipeListeners();
     }
-
     function onMobilePlayerStateChange(event) {
         if (event.data === YT.PlayerState.PLAYING && !players['mobile'].isMuted()) {
             document.getElementById('unmuteButton').style.display = 'none';
@@ -110,39 +122,35 @@
             playNextMobile();
         }
     }
-    
     function playNextMobile() {
         if (videoIds.length <= 1) return;
         currentMobileIndex = (currentMobileIndex + 1) % videoIds.length;
         players['mobile'].loadVideoById(videoIds[currentMobileIndex]);
     }
-
     function playPrevMobile() {
         if (videoIds.length <= 1) return;
         currentMobileIndex = (currentMobileIndex - 1 + videoIds.length) % videoIds.length;
         players['mobile'].loadVideoById(videoIds[currentMobileIndex]);
     }
-
     function setupSwipeListeners() {
         const container = document.getElementById('touchOverlay');
         let startY = 0;
         container.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
         container.addEventListener('touchend', e => {
             const deltaY = startY - e.changedTouches[0].clientY;
-            if (Math.abs(deltaY) > 50) {
-                if (deltaY > 0) playNextMobile(); else playPrevMobile();
-            }
+            if (Math.abs(deltaY) > 50) { if (deltaY > 0) playNextMobile(); else playPrevMobile(); }
         }, { passive: true });
     }
 
-    // --- 데스크톱 뷰 설정 ---
+
+    // --- 데스크톱 뷰 설정 (4열 그리드) ---
     function setupDesktopView() {
         const desktopContainer = document.getElementById('desktop-view');
         videoIds.forEach((id, index) => {
             const wrapper = document.createElement('div');
             wrapper.className = 'desktop-player-wrapper';
-            wrapper.dataset.videoId = id;
-            wrapper.dataset.playerIndex = index;
+            wrapper.dataset.index = index;
+            wrapper.onclick = () => playDesktopVideo(index);
             
             const playerDiv = document.createElement('div');
             playerDiv.id = 'desktop-player-' + index;
@@ -152,33 +160,43 @@
             desktopContainer.appendChild(wrapper);
         });
 
-        const observer = new IntersectionObserver(handleIntersection, { threshold: 0.6 });
-        document.querySelectorAll('.desktop-player-wrapper').forEach(wrapper => observer.observe(wrapper));
+        // 첫번째 영상 자동 재생
+        if (videoIds.length > 0) {
+            playDesktopVideo(0);
+        }
     }
 
-    let lastPlayed = null;
-    function handleIntersection(entries) {
-        entries.forEach(entry => {
-            const index = entry.target.dataset.playerIndex;
-            if (entry.isIntersecting) {
-                if (lastPlayed && lastPlayed !== players[index]) {
-                   if (players[lastPlayed.id]) players[lastPlayed.id].pauseVideo();
-                }
+    function playDesktopVideo(index) {
+        if (index < 0 || index >= videoIds.length) {
+            if (SETTINGS.enableLoop) index = 0;
+            else return;
+        }
 
-                if (players[index]) {
-                    players[index].playVideo();
-                } else {
-                    createDesktopPlayer(index);
-                }
-                lastPlayed = {id: index, player: players[index]};
-            } else {
-                if (players[index]) {
-                    players[index].pauseVideo();
-                }
+        // 이전에 재생되던 영상 정지 및 하이라이트 제거
+        if (currentDesktopIndex !== -1 && players[currentDesktopIndex]) {
+            players[currentDesktopIndex].pauseVideo();
+            document.querySelector(`.desktop-player-wrapper[data-index="${currentDesktopIndex}"]`)?.classList.remove('is-playing');
+        }
+
+        currentDesktopIndex = index;
+        const wrapper = document.querySelector(`.desktop-player-wrapper[data-index="${index}"]`);
+        wrapper?.classList.add('is-playing');
+        
+        // 부드럽게 화면에 보이도록 스크롤
+        if(wrapper) {
+            const rect = wrapper.getBoundingClientRect();
+            if (rect.top < 0 || rect.bottom > window.innerHeight) {
+                 wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
-        });
-    }
+        }
 
+        if (players[index]) {
+            players[index].playVideo();
+        } else {
+            createDesktopPlayer(index);
+        }
+    }
+    
     function createDesktopPlayer(index) {
         const videoId = videoIds[index];
         players[index] = new YT.Player('desktop-player-' + index, {
@@ -188,28 +206,19 @@
                 'autoplay': 1, 'mute': 0, 'rel': 0, 
                 'playsinline': 1, 'controls': SETTINGS.enableControls ? 1 : 0
             },
-            events: { 'onStateChange': onDesktopPlayerStateChange }
+            events: {
+                'onReady': (event) => { event.target.playVideo(); },
+                'onStateChange': onDesktopPlayerStateChange
+            }
         });
     }
 
     function onDesktopPlayerStateChange(event) {
         if (event.data === YT.PlayerState.ENDED) {
-            const currentPlayerId = event.target.getIframe().id; // "desktop-player-0"
-            const currentIndex = parseInt(currentPlayerId.split('-')[2]);
-            let nextIndex = currentIndex + 1;
-
-            if (nextIndex >= videoIds.length) {
-                if (SETTINGS.enableLoop) {
-                    nextIndex = 0; // 전체 목록 반복
-                } else {
-                    return; // 반복 안 함
-                }
-            }
-            
-            const nextPlayerWrapper = document.querySelector(`[data-player-index="${nextIndex}"]`);
-            if (nextPlayerWrapper) {
-                nextPlayerWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+            // 현재 재생이 끝난 영상의 인덱스를 찾아 다음 영상 재생
+            const iframeId = event.target.getIframe().id;
+            const currentIndex = parseInt(iframeId.split('-')[2]);
+            playDesktopVideo(currentIndex + 1);
         }
     }
 
