@@ -22,7 +22,7 @@
         
         #desktop-view { display: none; }
 
-        /* --- [재수정] 데스크톱 3열 및 최대 높이 레이아웃 --- */
+        /* --- 데스크톱 3열 및 최대 높이 레이아웃 --- */
         @media (min-width: 850px) {
             body {
                 background-color: #121212;
@@ -42,29 +42,20 @@
                 padding: 20px;
                 box-sizing: border-box;
             }
-            /* 가운데 메인 플레이어 (최대 높이 적용) */
             #main-player-wrapper {
-                /* 화면 높이에 맞춰 높이 설정 (상하 여백 40px 고려) */
                 height: calc(100vh - 40px);
-                /* 높이에 맞춰 9:16 비율 너비 계산 */
-                width: calc((100vh - 40px) * 9 / 16);
-                
-                /* 화면이 너무 클 때를 대비한 최대 크기 제한 */
                 max-height: 800px;
-                max-width: 450px;
-                
+                aspect-ratio: 9 / 16;
                 background-color: #000;
                 border-radius: 16px;
                 box-shadow: 0 10px 40px rgba(0,0,0,0.5);
                 overflow: hidden;
-                flex-shrink: 0; /* 컨테이너 크기 축소 방지 */
+                flex-shrink: 0;
             }
             #desktop-player-instance { width: 100%; height: 100%; }
-            
-            /* 양옆 썸네일 */
             .side-video {
-                width: 150px; /* 너비 고정 */
-                height: calc(150px * 16 / 9); /* 16:9 비율 높이 */
+                width: 150px;
+                height: calc(150px * 16 / 9);
                 border-radius: 12px;
                 overflow: hidden;
                 cursor: pointer;
@@ -104,7 +95,6 @@
             <div class="overlay"><span>&#9654;</span></div>
         </div>
     </div>
-
 <script>
     const videoIds = ["gO2wWtyFOSM","2muBwacdvzc","JaqeXoKpbRQ","j3tXMEFu8WE","Go8rzQtwQWA","i1a3AkqKN5U"];
     const SETTINGS = { enableControls: true, enableSwipe: true, enableLoop: true };
@@ -123,7 +113,6 @@
         }
     }
     
-    // --- 공용 에러 핸들러 ---
     function onPlayerError(event) {
         console.error("Player Error:", event.data, "Playing next video.");
         if (desktopPlayer) {
@@ -133,7 +122,6 @@
         }
     }
 
-    // --- 모바일 뷰 로직 (onError 포함) ---
     function setupMobileView(){const c=document.getElementById('mobile-player-container');const p=document.createElement('div');c.appendChild(p);mobilePlayer=new YT.Player(p,{height:'100%',width:'100%',videoId:videoIds[0],playerVars:{'autoplay':1,'mute':1,'rel':0,'playsinline':1,'controls':0},events:{'onReady':onMobilePlayerReady,'onStateChange':onMobilePlayerStateChange,'onError':onPlayerError}})}
     function onMobilePlayerReady(event){const b=document.getElementById('unmuteButton');b.style.display='block';b.addEventListener('click',()=>{mobilePlayer.unMute();b.style.display='none'});if(SETTINGS.enableSwipe)setupSwipeListeners()}
     function onMobilePlayerStateChange(event){if(event.data===YT.PlayerState.PLAYING&&!mobilePlayer.isMuted()){document.getElementById('unmuteButton').style.display='none'}else if(event.data===YT.PlayerState.ENDED){playNextMobile()}}
@@ -141,7 +129,6 @@
     function playPrevMobile(){currentMobileIndex--;if(currentMobileIndex<0){if(SETTINGS.enableLoop)currentMobileIndex=videoIds.length-1;else{currentMobileIndex=0;return}}mobilePlayer.loadVideoById(videoIds[currentMobileIndex])}
     function setupSwipeListeners(){const c=document.getElementById('touchOverlay');let s=0;c.addEventListener('touchstart',e=>{s=e.touches[0].clientY},{passive:true});c.addEventListener('touchend',e=>{const d=s-e.changedTouches[0].clientY;if(Math.abs(d)>50){if(d>0)playNextMobile();else playPrevMobile()}},{passive:true})}
 
-    // --- 데스크톱 뷰 로직 (onError 포함) ---
     function setupDesktopView() {
         const mainContainer = document.getElementById('main-player-wrapper');
         const playerDiv = document.createElement('div');
@@ -175,8 +162,11 @@
         const nextThumb = document.getElementById('next-thumb');
         const prevContainer = document.getElementById('prev-video');
         const nextContainer = document.getElementById('next-video');
-        prevThumb.src = `https://i.ytimg.com/vi/${videoIds[prevIndex]}/hqdefault.jpg`;
-        nextThumb.src = `https://i.ytimg.com/vi/${videoIds[nextIndex]}/hqdefault.jpg`;
+        
+        /* --- [오류 수정] 템플릿 리터럴 대신 문자열 합치기로 변경 --- */
+        prevThumb.src = 'https://i.ytimg.com/vi/' + videoIds[prevIndex] + '/hqdefault.jpg';
+        nextThumb.src = 'https://i.ytimg.com/vi/' + videoIds[nextIndex] + '/hqdefault.jpg';
+
         prevContainer.onclick = () => updateDesktopView(prevIndex);
         nextContainer.onclick = () => updateDesktopView(nextIndex);
         prevContainer.style.visibility = (numVideos > 1 && (SETTINGS.enableLoop || currentDesktopIndex > 0)) ? 'visible' : 'hidden';
