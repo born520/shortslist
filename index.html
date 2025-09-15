@@ -30,9 +30,17 @@
                 padding: 20px;
                 box-sizing: border-box;
             }
-            #main-player-wrapper {
-                width: 350px;
-                height: calc(350px * 16 / 9);
+             #main-player-wrapper {
+                /* 화면 높이의 90%를 차지하도록 설정 (상하 여백 고려) */
+                height: 90vh; 
+                
+                /* 높이에 맞춰 9:16 비율의 너비를 자동으로 계산 */
+                width: calc(90vh * 9 / 16);
+
+                /* 화면이 매우 클 경우를 대비해 최대 크기 제한 */
+                max-height: 850px;
+                max-width: 478px; /* max-height의 9:16 비율 너비 */
+
                 background-color: #000;
                 border-radius: 12px;
                 box-shadow: 0 10px 30px rgba(0,0,0,0.3);
